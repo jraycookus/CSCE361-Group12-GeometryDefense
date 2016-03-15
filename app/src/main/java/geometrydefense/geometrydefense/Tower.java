@@ -48,35 +48,22 @@ public class Tower{
 
         if(cooldown > 0){
             cooldown--;
+            return;
         }
         if (cooldown ==0){
             for(Enemy enemy:enemyList){
-                if (cooldown > 0) break;
+                if (cooldown > 0) return;
 
                 distance = calculateDistance(enemy);
-                if(distance <=range){
+                if(distance <= range && cooldown == 0){
                     attack(enemy);
                     cooldown = 200;
                 }
             }
         }
-
-
-        if(cooldown == 0) {
-            for (Enemy enemy : enemyList) {
-                if (calculateDistance(enemy) < 300 && cooldown == 0) {
-                    attack(enemy);
-                    cooldown = 200;
-                }
-            }
-        }
-
     }
 
     public void draw(Canvas canvas) {
         canvas.drawBitmap(this.towerImage,this.position.x-this.towerImage.getWidth()/2,this.position.y-this.towerImage.getHeight()/2,null);
     }
-
-
-
 }
