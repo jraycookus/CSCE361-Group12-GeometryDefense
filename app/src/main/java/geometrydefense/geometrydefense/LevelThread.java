@@ -1,8 +1,5 @@
 package geometrydefense.geometrydefense;
 
-/**
- * Created by Colby on 3/13/2016.
- */
 
 import android.graphics.Canvas;
 import android.util.Log;

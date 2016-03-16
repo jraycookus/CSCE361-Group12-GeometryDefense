@@ -7,9 +7,7 @@ import android.graphics.Point;
 
 import java.util.ArrayList;
 
-/**
- * Created by Colby on 3/13/2016.
- */
+
 public class Enemy {
     private double hitpoints;
     private double armor;
@@ -58,6 +56,10 @@ public class Enemy {
         return path;
     }
 
+    public Point getPosition(){
+        return this.position;
+    }
+
     public void update(){
         //move at speed in x direction and y direction towards next point
         //take the sign of the difference of position and target to get direction
@@ -86,14 +88,20 @@ public class Enemy {
 
     public void killed(){
         this.level.updateGold(this.value);
+        this.level.remove(this);
     }
 
-    public void projectileHit(){
-
+    public void projectileHit(double damage){
+        //armor will be a percentage between 0(does not reduce damage at all) and 1(negates all damage)
+        this.hitpoints-=damage*(1-armor);
+        if(this.hitpoints<=0){
+            this.killed();
+        }
     }
 
     public void endOfPath(){
         this.level.loselife(this);
+        this.level.remove(this);
     }
 
 }

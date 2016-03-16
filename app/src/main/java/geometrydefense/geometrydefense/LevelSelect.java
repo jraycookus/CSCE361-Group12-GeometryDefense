@@ -9,9 +9,6 @@ import android.widget.Button;
 import android.widget.GridLayout;
 
 
-/**
- * Created by Colby on 3/12/2016.
- */
 public class LevelSelect extends AppCompatActivity {
 
 

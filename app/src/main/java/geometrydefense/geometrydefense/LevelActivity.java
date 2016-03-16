@@ -13,9 +13,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-/**
- * Created by Colby on 3/13/2016.
- */
+
 public class LevelActivity extends AppCompatActivity {
 
     private Level level;
@@ -37,6 +35,21 @@ public class LevelActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 level.sendWave();
+            }
+        });
+
+        //set listeners for the buy and sell button
+        ((Button)findViewById(R.id.buy_btn)).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                level.buyBtn();
+            }
+        });
+        ((Button)findViewById(R.id.sell_btn)).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                level.sellBtn();
             }
         });
 

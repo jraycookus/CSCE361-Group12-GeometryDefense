@@ -11,32 +11,34 @@ import android.view.SurfaceView;
 
 import java.util.ArrayList;
 
-/**
- * Created by Colby on 3/12/2016.
- */
 
 public class Level extends SurfaceView implements SurfaceHolder.Callback{
     private LevelThread thread;
     private BitmapFactory.Options options = new BitmapFactory.Options();
     private Bitmap levelMap;
+    private Bitmap towerImage;
+    private Bitmap projImage;
     private ArrayList<Tower> towersOnScreen = new ArrayList<Tower>();
     private ArrayList<Enemy> enemiesOnScreen = new ArrayList<Enemy>();
-    private ArrayList<Enemy> deadEnemy=new ArrayList<Enemy>();
     private ArrayList<Projectile> projOnScreen = new ArrayList<Projectile>();
+    private ArrayList<Tower> destroyTower = new ArrayList<Tower>(); // keep track of list of objects to remove from screen since they cant be removed while looping though list
+    private ArrayList<Enemy> deadEnemy=new ArrayList<Enemy>();
+    private ArrayList<Projectile> destroyProj = new ArrayList<Projectile>();
     private int gold=1000;
     private int lives=10;
-    //number of ticks before wave is sent at 30 fps
-    private double timetoNextWave=-1;
-    //number of ticks before next enemy of a wave is sent
-    private double timetoNextEnemy=0;
-    //number of enemies remaining in wave
-    private int enemiesLeft=0;
-    //current enemy wave number-used to choose which enemy to spawn
-    private int enemyWave=0;
+    private int towerCost = 100;
+    private double timetoNextWave=-1;     //number of ticks before wave is sent at 30 fps
+    private double timetoNextEnemy=0;     //number of ticks before next enemy of a wave is sent
+    private int enemiesLeft=0;      //number of enemies remaining in wave
+    private int enemyWave=0;     //current enemy wave number-used to choose which enemy to spawn from list
     private ArrayList<Enemy> enemyWaves = new ArrayList<Enemy>();
     private ArrayList<Point> enemyPath = new ArrayList<Point>();
-    //keep the creating activity to keep track of ui elements
-    private LevelActivity activity;
+    private LevelActivity activity;     //keep the creating activity to keep track of ui elements
+    private boolean buyMode=false;  //boolean to keep track of if a tower is being placed -resets after placing tower
+    private boolean sellMode = false; //same as buyMode except for selling an existing tower instead
+    private Point buyTowerPoint;    //Point to keep track of where the user is hovering to place their tower-used to draw tower
+
+
 
 
 
@@ -52,6 +54,8 @@ public class Level extends SurfaceView implements SurfaceHolder.Callback{
         //load level background
         options.inScaled=false;
         levelMap = BitmapFactory.decodeResource(getResources(), R.drawable.level1map,options);
+        towerImage = BitmapFactory.decodeResource(getResources(),R.drawable.tower_sprite,options);
+        projImage = BitmapFactory.decodeResource(getResources(),R.drawable.projectile_sprite);
 
         //create path list-enemies will start at first point and then go throug all points until reaching the end
         enemyPath.add(new Point(90,0));
@@ -91,15 +95,28 @@ public class Level extends SurfaceView implements SurfaceHolder.Callback{
     }
 
     @Override
+    //mouse events on canvas
     public boolean onTouchEvent(MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
             // screen pressed
+            if(this.buyMode){
+                this.buyTowerPoint=roundToNearest(new Point((int)event.getX(),(int)event.getY()));
+            }
 
         } if (event.getAction() == MotionEvent.ACTION_MOVE) {
             // drag event
+            if(this.buyMode){
+                this.buyTowerPoint=roundToNearest(new Point((int)event.getX(),(int)event.getY()));
+            }
 
         } if (event.getAction() == MotionEvent.ACTION_UP) {
             // touch was released
+            if(this.buyMode){
+                this.buyTower(roundToNearest(new Point((int)event.getX(),(int)event.getY())));
+            }
+            if(this.sellMode){
+                this.sellTower(roundToNearest((new Point((int)event.getX(),(int)event.getY()))));
+            }
 
         }
         return true;
@@ -107,10 +124,77 @@ public class Level extends SurfaceView implements SurfaceHolder.Callback{
     }
 
 
+    //take a point and round its coordinates to the nearest 30 for the grid size of the game to place towers-then add 15 to place tower in middle of grid square
+    public Point roundToNearest(Point p){
+        int multiple =30;
+        p.x=Math.round(p.x/multiple)*multiple+multiple/2;
+        p.y=Math.round(p.y/multiple)*multiple+multiple/2;
+        return p;
+    }
+
+    public void buyTower(Point position){
+        //check if the user has enough gold to build the tower
+        if(gold>=towerCost){
+            //check if the tower is in a valid position
+            if(validPosition(position)) {
+                Tower t = new Tower(position, 50, 20, 200, this.towerImage, this.projImage, this);
+                this.updateGold(-towerCost);
+                this.towersOnScreen.add(t);
+            }
+        }
+        //whether buy was succesful or not, remove buymode and reset towerpoint so the tower isnt displayed anymore
+        this.buyTowerPoint=null;
+        this.buyMode=false;
+    }
+
+    public boolean validPosition(Point position){
+        //check if the tower is not on the path or other obstacle
+        for(Tower t:this.towersOnScreen){
+            if(t.getPosition().equals(position)){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public void sellTower(Point position){
+        //check to see if a tower was on top of sell point
+        for(Tower t:this.towersOnScreen){
+            if(t.getPosition().equals(position)){
+                //tower at position-remove it and refund some gold
+                this.updateGold(t.getValue());
+                this.destroyTower.add(t);
+                break; //towers cannot be on top of each other so break loop
+            }
+        }
+        //whether tower was sold or not, remove sellmode
+        this.sellMode=false;
+
+    }
+
+    public void buyBtn(){
+        //if sellmode is on, take it off
+        if(this.sellMode){
+            this.sellMode = !this.sellMode;
+        }
+        this.buyMode = !this.buyMode;
+    }
+
+    public void sellBtn(){
+        //if buymode is on, take it off
+        if(this.buyMode){
+            this.buyMode = !this.buyMode;
+        }
+        this.sellMode=!this.sellMode;
+    }
+
     public void render(Canvas canvas){
         //draw own level map first
         canvas.drawBitmap(levelMap, 0, 0, null);
-
+        //draw tower to be placed if in buymode and the user has their finger on sccreen for the coordinates
+        if(this.buyMode&&this.buyTowerPoint!=null){
+            canvas.drawBitmap(this.towerImage,this.buyTowerPoint.x-this.towerImage.getWidth()/2,this.buyTowerPoint.y-this.towerImage.getHeight()/2,null);
+        }
         //draw all enemies, towers, and projectiles
         for(Enemy enemy:enemiesOnScreen){
             enemy.draw(canvas);
@@ -145,8 +229,10 @@ public class Level extends SurfaceView implements SurfaceHolder.Callback{
             }
         }
 
-        //remove any enemies that should be destroyed
+        //remove any objects that should be destroyed
         enemiesOnScreen.removeAll(deadEnemy);
+        towersOnScreen.removeAll(destroyTower);
+        projOnScreen.removeAll(destroyProj);
 
         //call update for all enemies, towers, and projectiles
         for(Enemy enemy:enemiesOnScreen){
@@ -186,8 +272,33 @@ public class Level extends SurfaceView implements SurfaceHolder.Callback{
 
     public void loselife(Enemy enemy){
         this.lives-=1;
-        activity.updateText(R.id.lives_text,"Lives: "+this.lives);
-        deadEnemy.add(enemy);
+        activity.updateText(R.id.lives_text, "Lives: " + this.lives);
+    }
+
+    //used to remove Enemies, towers, and projectiles from screen.  Will be removed at start of update loop since they cant be removed while looping through
+    public void remove(Object object){
+        if(object.getClass() == Enemy.class) {
+            deadEnemy.add((Enemy) object);
+            //if an enemy is removed, make sure to remove all projectiles that are still currently targeting it
+            for(Projectile p:this.projOnScreen){
+                if(p.getTarget().equals((Enemy)object)){
+                    this.destroyProj.add(p);
+                }
+            }
+        }else if (object.getClass()==Tower.class){
+            destroyTower.add((Tower)object);
+        }else if(object.getClass()==Projectile.class){
+            destroyProj.add((Projectile) object);
+        }
+        //do nothing if not of type enemy, tower, or projectile
+    }
+
+    public void addProjectile(Projectile p){
+        this.projOnScreen.add(p);
+    }
+
+    public ArrayList<Enemy> getEnemiesOnScreen(){
+        return this.enemiesOnScreen;
     }
 
 }
