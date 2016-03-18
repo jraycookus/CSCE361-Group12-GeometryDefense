@@ -15,6 +15,7 @@ import java.util.ArrayList;
 public class Level extends SurfaceView implements SurfaceHolder.Callback{
     private LevelThread thread;
     private BitmapFactory.Options options = new BitmapFactory.Options();
+    private BitmapFactory.Options options4sprites = new BitmapFactory.Options();
     private Bitmap levelMap;
     private Bitmap towerImage;
     private Bitmap projImage;
@@ -37,8 +38,13 @@ public class Level extends SurfaceView implements SurfaceHolder.Callback{
     private boolean buyMode=false;  //boolean to keep track of if a tower is being placed -resets after placing tower
     private boolean sellMode = false; //same as buyMode except for selling an existing tower instead
     private Point buyTowerPoint;    //Point to keep track of where the user is hovering to place their tower-used to draw tower
-
-
+    private float density = getResources().getDisplayMetrics().density;
+    private int scaleMultipliyer = (int) (density +0.5f);
+    private int topUIHeight = (int) (180 * density +0.5f);
+    private int dstWidth = getResources().getDisplayMetrics().widthPixels;
+    private int dstHeight = (getResources().getDisplayMetrics().heightPixels) - 180;
+    private int bgWidth = 540;
+    private int bgHieght = 777;
 
 
 
@@ -52,25 +58,31 @@ public class Level extends SurfaceView implements SurfaceHolder.Callback{
         //create new thread to start running the level
         thread = new LevelThread(getHolder(), this);
         //load level background
-        options.inScaled=false;
-        levelMap = BitmapFactory.decodeResource(getResources(), R.drawable.level1map,options);
-        towerImage = BitmapFactory.decodeResource(getResources(),R.drawable.tower_sprite,options);
-        projImage = BitmapFactory.decodeResource(getResources(),R.drawable.projectile_sprite);
+        options.inScaled = false;
+        options4sprites.inScaled = true;
 
-        //create path list-enemies will start at first point and then go throug all points until reaching the end
-        enemyPath.add(new Point(90,0));
-        enemyPath.add(new Point(90,690));
-        enemyPath.add(new Point(210,690));
-        enemyPath.add(new Point(210,90));
-        enemyPath.add(new Point(330,90));
-        enemyPath.add(new Point(330,690));
-        enemyPath.add(new Point(450,690));
-        enemyPath.add(new Point(450,90));
-        enemyPath.add(new Point(540,90));
+        levelMap = BitmapFactory.decodeResource(getResources(), R.drawable.level1map,options);
+        levelMap = Bitmap.createScaledBitmap(levelMap, dstWidth, dstHeight,true);
+        towerImage = BitmapFactory.decodeResource(getResources(),R.drawable.tower_sprite,options4sprites);
+        projImage = BitmapFactory.decodeResource(getResources(),R.drawable.projectile_sprite,options4sprites);
+
+        //create path list-enemies will start at first point and then go through all points until reaching the end
+
+
+
+        enemyPath.add(new Point(scalePointW(90.0),scalePointH(0.0)));
+        enemyPath.add(new Point(scalePointW(90.0),scalePointH(690.0)));
+        enemyPath.add(new Point(scalePointW(210.0),scalePointH(690.0)));
+        enemyPath.add(new Point(scalePointW(210.0),scalePointH(90.0)));
+        enemyPath.add(new Point(scalePointW(330.0),scalePointH(90.0)));
+        enemyPath.add(new Point(scalePointW(330.0),scalePointH(690.0)));
+        enemyPath.add(new Point(scalePointW(450.0),scalePointH(690.0)));
+        enemyPath.add(new Point(scalePointW(450.0),scalePointH(90.0)));
+        enemyPath.add(new Point(scalePointW(540.0),scalePointH(90.0)));
 
         //create enemy list
         for(int i=0;i<10;i++){
-            enemyWaves.add(new Enemy(100+i*10,0,5,100+i*5,BitmapFactory.decodeResource(getResources(),R.drawable.normal_enemy_sprite,options),enemyPath,this));
+            enemyWaves.add(new Enemy(100+i*10,0,5,100+i*5,BitmapFactory.decodeResource(getResources(),R.drawable.normal_enemy_sprite,options4sprites),enemyPath,this));
         }
 
 
@@ -123,7 +135,17 @@ public class Level extends SurfaceView implements SurfaceHolder.Callback{
 
     }
 
-
+    //used to scale width of path point with background stretch
+    public int scalePointW(double point) {
+        double p = (point / bgWidth) * dstWidth;
+        int pInt = (int) (p + 0.5d);
+        return pInt;
+    }
+    public int scalePointH(double point) {
+        double p = (point / bgHieght) * (dstHeight);
+        int pInt = (int) (p + 0.5d);
+        return pInt;
+    }
     //take a point and round its coordinates to the nearest 30 for the grid size of the game to place towers-then add 15 to place tower in middle of grid square
     public Point roundToNearest(Point p){
         int multiple =30;
